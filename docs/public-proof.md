@@ -6,7 +6,11 @@ This repository is explicitly a prototype/architecture proof, not a claim of pro
 
 ## 30-second review
 
-Start with the existing screenshots:
+![Protected Operations resilience walkthrough](assets/screenshots/org-ai-force-demo.gif)
+
+The animation is deterministic mock-mode public proof: **healthy workspace → tool denied by policy → approval rejected → browser-worker timeout → bounded retry → degraded readiness**. It does not imply public hosting, live provider incidents, or production enterprise adoption.
+
+Then scan the existing screenshots:
 
 - [`workspace.png`](assets/screenshots/workspace.png)
 - [`admin-dashboard.png`](assets/screenshots/admin-dashboard.png)
@@ -18,7 +22,7 @@ Then read the resilience rule:
 
 > A frontend may show that a capability exists, but only the backend policy boundary can authorize execution.
 
-The Operations surface now includes deterministic degraded scenarios so the workspace can be reviewed when dependencies fail, not only when the demo is healthy.
+The Operations surface includes deterministic degraded scenarios so the workspace can be reviewed when dependencies fail, not only when the demo is healthy.
 
 ## 3-minute review
 
@@ -105,22 +109,24 @@ The resilience lab is embedded in the existing protected Operations surface rath
 - browser/provider/retrieval failures are not silently converted to success
 - mock/demo behavior is labeled as such
 
-## Screenshot/GIF capture sequence
+## Completed visual-proof sequence
 
-Use the existing screenshot set plus one updated operations/resilience capture:
+The checked-in `org-ai-force-demo.gif` follows the final reviewer sequence:
 
-1. workspace overview;
-2. admin governance surface;
-3. tool execution timeline/approval state;
-4. pilot/readiness surface;
-5. Operations surface with one deterministic failure scenario selected;
-6. retry/recovery or degraded readiness state.
+1. healthy workspace context with governed capability visibility;
+2. tool denied by backend policy;
+3. approval rejection remaining non-executed;
+4. browser-worker timeout remaining visibly failed;
+5. bounded retry preserving the failed attempt instead of rewriting history;
+6. degraded readiness that avoids claiming full platform health.
 
-The strongest short GIF would move from healthy workspace → governed action → degraded dependency → explicit recovery/readiness state.
+The asset is deliberately compact for GitHub README loading and keeps **mock-mode** and the backend-authority rule visible inside the animation.
+
+For reproducible protected-route capture guidance, see [`public-proof-capture.md`](public-proof-capture.md).
 
 ## CI proof
 
-The repository now has PR-triggered CI validating:
+The repository has PR-triggered CI validating:
 
 - frontend tests
 - frontend typecheck
