@@ -2,6 +2,8 @@ name: Capture Public Proof
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches: ['agent/final-visual-proof']
     paths:
@@ -17,19 +19,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Install application dependencies
         run: npm ci
-
       - name: Enable existing local mock-agent mode for protected proof capture
         run: sed -i 's/enableMockAgents: false/enableMockAgents: true/' src/environments/environment.ts
-
       - name: Start Angular workspace locally
         shell: bash
         run: |
@@ -40,7 +38,6 @@ jobs:
           done
           cat /tmp/org-ai-force-ui.log
           exit 1
-
       - name: Install isolated Playwright runtime
         run: |
           mkdir -p /tmp/public-proof-playwright
@@ -48,17 +45,14 @@ jobs:
           npm init -y
           npm install --no-audit --no-fund playwright@1.54.2
           npx playwright install --with-deps chromium
-
       - name: Install GIF tooling
         run: sudo apt-get update && sudo apt-get install -y imagemagick gifsicle
-
       - name: Capture protected mock-mode Operations proof
         env:
           NODE_PATH: /tmp/public-proof-playwright/node_modules
           CAPTURE_BASE_URL: http://127.0.0.1:4200/
           CAPTURE_OUTPUT_DIR: ${{ runner.temp }}/public-proof-captures
         run: node scripts/capture-public-proof.cjs
-
       - name: Build optimized Operations resilience GIF
         shell: bash
         run: |
@@ -75,7 +69,6 @@ jobs:
           gifsicle -O3 --colors 128 "$out" -o "$out"
           test -s "$out"
           test "$(stat -c%s "$out")" -lt 8000000
-
       - name: Upload public proof captures
         uses: actions/upload-artifact@v4
         with:
@@ -85,7 +78,6 @@ jobs:
             docs/assets/screenshots/org-ai-force-demo.gif
           if-no-files-found: error
           retention-days: 30
-
       - name: Commit generated final asset to generation branch
         if: ${{ github.event_name == 'push' && github.ref_name == 'agent/final-visual-proof' }}
         shell: bash
