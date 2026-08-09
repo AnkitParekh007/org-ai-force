@@ -1,19 +1,23 @@
 name: Capture Public Proof
 
 on:
-  workflow_dispatch:
-  pull_request:
+  pull_request_target:
     branches: [main]
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   capture-local-mock-proof:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout same-repository PR head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || 'main' }}
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -53,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           captures='${{ runner.temp }}/public-proof-captures'
-          out='${{ runner.temp }}/org-ai-force-demo.gif'
+          out='docs/assets/screenshots/org-ai-force-demo.gif'
           frames=()
           for name in workspace operations-policy-denied operations-approval-rejected operations-browser-timeout operations-browser-timeout-retry readiness; do
             test -s "$captures/$name.png"
@@ -69,6 +73,17 @@ jobs:
           name: org-ai-force-public-proof
           path: |
             ${{ runner.temp }}/public-proof-captures
-            ${{ runner.temp }}/org-ai-force-demo.gif
+            docs/assets/screenshots/org-ai-force-demo.gif
           if-no-files-found: error
           retention-days: 30
+      - name: Commit validated GIF to PR branch
+        if: ${{ github.event_name == 'pull_request_target' }}
+        shell: bash
+        run: |
+          git restore src/environments/environment.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/assets/screenshots/org-ai-force-demo.gif
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add Operations resilience public proof GIF [skip ci]'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
