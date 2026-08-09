@@ -18,7 +18,8 @@ let browser;
   async function open(name, route) {
     const requestedUrl = new URL(route.replace(/^\//, ''), baseUrl).toString();
     const response = await page.goto(requestedUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await page.waitForTimeout(700);
+    await page.locator('body').waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForTimeout(500);
     if (/login/i.test(page.url())) throw new Error(`${route} redirected to login; protected proof was not captured`);
     return { name, requestedUrl, response };
   }
@@ -37,12 +38,12 @@ let browser;
   async function captureOpsScenario(name, matcher, retry = false) {
     const opened = await open(name, '/ops');
     const control = page.getByRole('button', { name: matcher }).first();
-    if (!(await control.count())) throw new Error(`No Operations scenario button matched ${matcher}`);
+    await control.waitFor({ state: 'visible', timeout: 30000 });
     await control.click();
     await page.waitForTimeout(300);
     if (retry) {
       const retryButton = page.getByRole('button', { name: /run deterministic retry/i }).first();
-      if (!(await retryButton.count())) throw new Error('Retry button was not available for retryable Operations scenario');
+      await retryButton.waitFor({ state: 'visible', timeout: 10000 });
       await retryButton.click();
       await page.waitForTimeout(350);
     }
