@@ -6,27 +6,29 @@ on:
   pull_request:
     branches: ['main']
 
-permissions:
-  contents: write
-
 jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
+
       - name: Install frontend dependencies
         run: npm ci
+
       - name: Run frontend tests
         run: npm test
+
       - name: Typecheck frontend
         run: npm run typecheck
+
       - name: Build frontend
         run: npm run build
 
@@ -38,122 +40,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: server/package-lock.json
+
       - name: Install backend dependencies
         run: npm ci
+
       - name: Typecheck backend
         run: npm run typecheck
-
-  visual-proof:
-    if: ${{ github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout merged main
-        uses: actions/checkout@v4
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install application dependencies
-        run: npm ci
-      - name: Enable existing local mock-agent mode for protected proof capture
-        run: sed -i 's/enableMockAgents: false/enableMockAgents: true/' src/environments/environment.ts
-      - name: Start Angular workspace locally
-        shell: bash
-        run: |
-          npm start -- --host 127.0.0.1 --port 4200 > /tmp/org-ai-force-ui.log 2>&1 &
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:4200/ >/dev/null; then exit 0; fi
-            sleep 2
-          done
-          cat /tmp/org-ai-force-ui.log
-          exit 1
-      - name: Install isolated Playwright runtime
-        run: |
-          mkdir -p /tmp/public-proof-playwright
-          cd /tmp/public-proof-playwright
-          npm init -y
-          npm install --no-audit --no-fund playwright@1.54.2
-          npx playwright install --with-deps chromium
-      - name: Install GIF tooling
-        run: sudo apt-get update && sudo apt-get install -y imagemagick gifsicle
-      - name: Capture protected Operations states
-        env:
-          NODE_PATH: /tmp/public-proof-playwright/node_modules
-          CAPTURE_BASE_URL: http://127.0.0.1:4200/
-          CAPTURE_OUTPUT_DIR: ${{ runner.temp }}/public-proof-captures
-        run: node scripts/capture-public-proof.cjs
-      - name: Build optimized Operations resilience GIF
-        shell: bash
-        run: |
-          set -euo pipefail
-          captures='${{ runner.temp }}/public-proof-captures'
-          out='docs/assets/screenshots/org-ai-force-demo.gif'
-          frames=()
-          for name in workspace operations-policy-denied operations-approval-rejected operations-browser-timeout operations-browser-timeout-retry readiness; do
-            test -s "$captures/$name.png"
-            frames+=("$captures/$name.png")
-          done
-          convert -delay 125 -loop 0 "${frames[@]}" -resize '960x600>' -layers Optimize "$out"
-          gifsicle -O3 --colors 128 "$out" -o "$out"
-          test -s "$out"
-          test "$(stat -c%s "$out")" -lt 8000000
-      - name: Upload final visual proof artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: org-ai-force-public-proof
-          path: |
-            ${{ runner.temp }}/public-proof-captures
-            docs/assets/screenshots/org-ai-force-demo.gif
-          if-no-files-found: error
-          retention-days: 30
-      - name: Embed proof, restore CI, and commit finished result
-        env:
-          CORE_CI_B64: bmFtZTogQ0kKCm9uOgogIHB1c2g6CiAgICBicmFuY2hlczogWydtYWluJ10KICBwdWxsX3JlcXVlc3Q6CiAgICBicmFuY2hlczogWydtYWluJ10KCmpvYnM6CiAgZnJvbnRlbmQ6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSBuYW1lOiBDaGVja291dAogICAgICAgIHVzZXM6IGFjdGlvbnMvY2hlY2tvdXRAdjQKCiAgICAgIC0gbmFtZTogU2V0IHVwIE5vZGUuanMgMjIKICAgICAgICB1c2VzOiBhY3Rpb25zL3NldHVwLW5vZGVAdjQKICAgICAgICB3aXRoOgogICAgICAgICAgbm9kZS12ZXJzaW9uOiAyMgogICAgICAgICAgY2FjaGU6IG5wbQogICAgICAgICAgY2FjaGUtZGVwZW5kZW5jeS1wYXRoOiBwYWNrYWdlLWxvY2suanNvbgoKICAgICAgLSBuYW1lOiBJbnN0YWxsIGZyb250ZW5kIGRlcGVuZGVuY2llcwogICAgICAgIHJ1bjogbnBtIGNpCgogICAgICAtIG5hbWU6IFJ1biBmcm9udGVuZCB0ZXN0cwogICAgICAgIHJ1bjogbnBtIHRlc3QKCiAgICAgIC0gbmFtZTogVHlwZWNoZWNrIGZyb250ZW5kCiAgICAgICAgcnVuOiBucG0gcnVuIHR5cGVjaGVjawoKICAgICAgLSBuYW1lOiBCdWlsZCBmcm9udGVuZAogICAgICAgIHJ1bjogbnBtIHJ1biBidWlsZAoKICBiYWNrZW5kOgogICAgcnVucy1vbjogdWJ1bnR1LWxhdGVzdAogICAgZGVmYXVsdHM6CiAgICAgIHJ1bjoKICAgICAgICB3b3JraW5nLWRpcmVjdG9yeTogc2VydmVyCiAgICBzdGVwczoKICAgICAgLSBuYW1lOiBDaGVja291dAogICAgICAgIHVzZXM6IGFjdGlvbnMvY2hlY2tvdXRAdjQKCiAgICAgIC0gbmFtZTogU2V0IHVwIE5vZGUuanMgMjIKICAgICAgICB1c2VzOiBhY3Rpb25zL3NldHVwLW5vZGVAdjQKICAgICAgICB3aXRoOgogICAgICAgICAgbm9kZS12ZXJzaW9uOiAyMgogICAgICAgICAgY2FjaGU6IG5wbQogICAgICAgICAgY2FjaGUtZGVwZW5kZW5jeS1wYXRoOiBzZXJ2ZXIvcGFja2FnZS1sb2NrLmpzb24KCiAgICAgIC0gbmFtZTogSW5zdGFsbCBiYWNrZW5kIGRlcGVuZGVuY2llcwogICAgICAgIHJ1bjogbnBtIGNpCgogICAgICAtIG5hbWU6IFR5cGVjaGVjayBiYWNrZW5kCiAgICAgICAgcnVuOiBucG0gcnVuIHR5cGVjaGVjawo=
-        shell: bash
-        run: |
-          git restore src/environments/environment.ts
-          python - <<'PY'
-          from pathlib import Path
-
-          readme = Path('README.md')
-          text = readme.read_text()
-          marker = '<img src="docs/assets/screenshots/org-ai-force-demo.gif"'
-          if marker not in text:
-              needle = "- Inspect the Operations surface to see how the workspace behaves when RAG, tools, approvals, browser workers, providers, or readiness dependencies fail.\n\nThe key enterprise rule is:"
-              insert = "- Inspect the Operations surface to see how the workspace behaves when RAG, tools, approvals, browser workers, providers, or readiness dependencies fail.\n\n<p align=\"center\">\n  <img src=\"docs/assets/screenshots/org-ai-force-demo.gif\" alt=\"Org AI Force protected Operations resilience walkthrough\" width=\"960\" />\n</p>\n\n<p align=\"center\"><em>Real exact-branch local capture in development-only mock mode: workspace → policy/approval denial → browser-worker timeout → deterministic retry → readiness. No public application or production enterprise deployment is claimed.</em></p>\n\nThe key enterprise rule is:"
-              if needle not in text: raise SystemExit('README top insertion point missing')
-              text = text.replace(needle, insert, 1)
-
-              old = "- `docs/assets/screenshots/tool-execution-timeline.png`\n\nThe short resilience/demo GIF is **planned, not currently checked in**. Track the capture work in [issue #12](https://github.com/AnkitParekh007/org-ai-force/issues/12)."
-              new = "- `docs/assets/screenshots/tool-execution-timeline.png`\n- `docs/assets/screenshots/org-ai-force-demo.gif`\n\nThe resilience GIF is generated from the exact Angular branch in CI using the repository's existing development-only mock-agent boundary; the capture fails if protected Operations routes redirect to login."
-              if old not in text: raise SystemExit('README screenshot inventory insertion point missing')
-              text = text.replace(old, new, 1)
-              readme.write_text(text)
-
-          proof = Path('docs/public-proof.md')
-          text = proof.read_text()
-          if 'org-ai-force-demo.gif' not in text:
-              needle = "## 30-second review\n\nStart with the existing screenshots:"
-              insert = "## 30-second review\n\n![Protected Operations resilience walkthrough](assets/screenshots/org-ai-force-demo.gif)\n\nThe animation is generated from the exact Angular branch running locally in CI with the repository's existing development-only mock-agent boundary. The capture validates protected `/ops` access and does not imply public hosting or production enterprise adoption.\n\nStart with the existing screenshots:"
-              if needle not in text: raise SystemExit('Public Proof top insertion point missing')
-              text = text.replace(needle, insert, 1)
-
-              old = "Use the existing screenshot set plus one updated operations/resilience capture:\n\n1. workspace overview;\n2. admin governance surface;\n3. tool execution timeline/approval state;\n4. pilot/readiness surface;\n5. Operations surface with one deterministic failure scenario selected;\n6. retry/recovery or degraded readiness state.\n\nThe strongest short GIF would move from healthy workspace → governed action → degraded dependency → explicit recovery/readiness state."
-              new = "The checked-in `org-ai-force-demo.gif` follows the completed proof sequence:\n\n1. workspace overview;\n2. governed policy/approval state;\n3. protected Operations surface;\n4. deterministic browser-worker failure;\n5. blocked/degraded state that remains explicit;\n6. deterministic retry and readiness recovery.\n\nThe GIF is reviewer evidence for the mock-safe architecture path, not a claim of live provider/tool incidents or a publicly hosted enterprise deployment."
-              if old not in text: raise SystemExit('Public Proof sequence insertion point missing')
-              text = text.replace(old, new, 1)
-              proof.write_text(text)
-          PY
-          echo "$CORE_CI_B64" | base64 -d > .github/workflows/ci.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/assets/screenshots/org-ai-force-demo.gif README.md docs/public-proof.md .github/workflows/ci.yml
-          git commit -m 'Complete Operations visual public proof [skip ci]'
-          git push origin HEAD:main
