@@ -6,29 +6,27 @@ on:
   pull_request:
     branches: ['main']
 
+permissions:
+  contents: write
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
-
       - name: Install frontend dependencies
         run: npm ci
-
       - name: Run frontend tests
         run: npm test
-
       - name: Typecheck frontend
         run: npm run typecheck
-
       - name: Build frontend
         run: npm run build
 
@@ -40,16 +38,90 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: server/package-lock.json
-
       - name: Install backend dependencies
         run: npm ci
-
       - name: Typecheck backend
         run: npm run typecheck
+
+  visual-proof:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install application dependencies
+        run: npm ci
+      - name: Enable existing local mock-agent mode for protected proof capture
+        run: sed -i 's/enableMockAgents: false/enableMockAgents: true/' src/environments/environment.ts
+      - name: Start Angular workspace locally
+        shell: bash
+        run: |
+          npm start -- --host 127.0.0.1 --port 4200 > /tmp/org-ai-force-ui.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4200/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/org-ai-force-ui.log
+          exit 1
+      - name: Install isolated Playwright runtime
+        run: |
+          mkdir -p /tmp/public-proof-playwright
+          cd /tmp/public-proof-playwright
+          npm init -y
+          npm install --no-audit --no-fund playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Install GIF tooling
+        run: sudo apt-get update && sudo apt-get install -y imagemagick gifsicle
+      - name: Capture protected Operations proof
+        env:
+          NODE_PATH: /tmp/public-proof-playwright/node_modules
+          CAPTURE_BASE_URL: http://127.0.0.1:4200/
+          CAPTURE_OUTPUT_DIR: ${{ runner.temp }}/public-proof-captures
+        run: node scripts/capture-public-proof.cjs
+      - name: Build optimized Operations resilience GIF
+        shell: bash
+        run: |
+          set -euo pipefail
+          captures='${{ runner.temp }}/public-proof-captures'
+          out='docs/assets/screenshots/org-ai-force-demo.gif'
+          frames=()
+          for name in workspace operations-policy-denied operations-approval-rejected operations-browser-timeout operations-browser-timeout-retry readiness; do
+            test -s "$captures/$name.png"
+            frames+=("$captures/$name.png")
+          done
+          convert -delay 125 -loop 0 "${frames[@]}" -resize '960x600>' -layers Optimize "$out"
+          gifsicle -O3 --colors 128 "$out" -o "$out"
+          test -s "$out"
+          test "$(stat -c%s "$out")" -lt 8000000
+      - name: Upload Operations visual proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: org-ai-force-public-proof
+          path: |
+            ${{ runner.temp }}/public-proof-captures
+            docs/assets/screenshots/org-ai-force-demo.gif
+          if-no-files-found: error
+          retention-days: 30
+      - name: Commit validated GIF to PR branch
+        shell: bash
+        run: |
+          git restore src/environments/environment.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/assets/screenshots/org-ai-force-demo.gif
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add Operations resilience public proof GIF [skip ci]'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
