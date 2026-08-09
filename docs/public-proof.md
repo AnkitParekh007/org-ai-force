@@ -1,0 +1,138 @@
+# Public Proof Review Path
+
+`Org AI Force` is the enterprise-operation layer of the portfolio: an Angular 21 workspace plus NestJS orchestration surface for role-aware agents, RAG-ready services, governed tools, approvals, MCP-style integrations, browser workers, pilot readiness, and degraded-dependency operations.
+
+This repository is explicitly a prototype/architecture proof, not a claim of production enterprise adoption.
+
+## 30-second review
+
+Start with the existing screenshots:
+
+- [`workspace.png`](assets/screenshots/workspace.png)
+- [`admin-dashboard.png`](assets/screenshots/admin-dashboard.png)
+- [`pilot-hub.png`](assets/screenshots/pilot-hub.png)
+- [`readiness-report.png`](assets/screenshots/readiness-report.png)
+- [`tool-execution-timeline.png`](assets/screenshots/tool-execution-timeline.png)
+
+Then read the resilience rule:
+
+> A frontend may show that a capability exists, but only the backend policy boundary can authorize execution.
+
+The Operations surface now includes deterministic degraded scenarios so the workspace can be reviewed when dependencies fail, not only when the demo is healthy.
+
+## 3-minute review
+
+Inspect the six enterprise resilience scenarios:
+
+| Scenario | Expected behavior |
+| --- | --- |
+| RAG unavailable | answer does not pretend retrieval succeeded; degraded state is explicit |
+| tool denied by policy | tool visibility does not become execution permission |
+| approval rejected | rejected work remains blocked/non-executed |
+| browser worker timeout | browser dependency failure remains visible and recoverable |
+| provider timeout | model/provider failure does not become a fabricated completion |
+| degraded readiness | operations surface shows partial platform health instead of a binary all-good state |
+
+These scenarios are deterministic and are meant for architecture review, demos, and automated tests.
+
+## 15-minute runnable review
+
+Local Docker path:
+
+```bash
+cp .env.docker.example .env
+docker compose up --build
+```
+
+Frontend development:
+
+```bash
+npm install
+npm test
+npm run typecheck
+npm run build
+npm start
+```
+
+Backend development:
+
+```bash
+cd server
+npm install
+npm run typecheck
+npm run build
+npm run start:dev
+```
+
+Useful review routes:
+
+- `/dashboard`
+- `/agents`
+- `/admin`
+- `/pilot`
+- `/pilot/readiness`
+- `/agent-readiness`
+- `/ops`
+- `/mcp-debug`
+- `/browser-test-debug`
+
+The resilience lab is embedded in the existing protected Operations surface rather than exposed as an unguarded standalone demo route.
+
+## What this proves
+
+### Enterprise frontend architecture
+
+- role-aware Angular workspace
+- agent chat, artifact, approval, tool, readiness, and operations surfaces
+- visible runtime state rather than opaque background automation
+- protected admin/debug paths
+
+### Agent/application architecture
+
+- NestJS orchestration boundary
+- server-side auth/RBAC
+- RAG/context services
+- governed tool registry and approvals
+- MCP-style integrations
+- Playwright/browser-worker boundary
+- readiness and observability surfaces
+
+### Operational trust
+
+- degraded states are first-class
+- backend authorization remains authoritative
+- human approvals remain explicit
+- browser/provider/retrieval failures are not silently converted to success
+- mock/demo behavior is labeled as such
+
+## Screenshot/GIF capture sequence
+
+Use the existing screenshot set plus one updated operations/resilience capture:
+
+1. workspace overview;
+2. admin governance surface;
+3. tool execution timeline/approval state;
+4. pilot/readiness surface;
+5. Operations surface with one deterministic failure scenario selected;
+6. retry/recovery or degraded readiness state.
+
+The strongest short GIF would move from healthy workspace → governed action → degraded dependency → explicit recovery/readiness state.
+
+## CI proof
+
+The repository now has PR-triggered CI validating:
+
+- frontend tests
+- frontend typecheck
+- frontend build
+- backend typecheck
+
+This makes the resilience proof reviewable on every change instead of relying on a manual demo only.
+
+## Ecosystem path
+
+This repository is the **enterprise operation/workspace** layer:
+
+[AI Tools Cheatsheets](https://github.com/AnkitParekh007/ai-tools-cheatsheets) → [Frontend AI Patterns](https://github.com/AnkitParekh007/frontend-ai-patterns) → [Angular AI Copilot Starter](https://github.com/AnkitParekh007/angular-ai-copilot-starter) → [ngx-copilot-platform](https://github.com/AnkitParekh007/ngx-copilot-platform) → [Agent Studio](https://github.com/AnkitParekh007/agent-studio) → **Org AI Force**
+
+**Learn → Pattern → Run → Platform → Govern → Operate**
