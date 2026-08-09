@@ -7,9 +7,10 @@ const outputDir = process.env.CAPTURE_OUTPUT_DIR || path.join(process.cwd(), 'pu
 const storageState = process.env.CAPTURE_STORAGE_STATE;
 const viewport = { width: 1440, height: 900 };
 fs.mkdirSync(outputDir, { recursive: true });
+let browser;
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport, colorScheme: 'light', reducedMotion: 'reduce', ...(storageState ? { storageState } : {}) });
   const page = await context.newPage();
   const manifest = [];
@@ -17,7 +18,7 @@ fs.mkdirSync(outputDir, { recursive: true });
   async function open(name, route) {
     const requestedUrl = new URL(route.replace(/^\//, ''), baseUrl).toString();
     const response = await page.goto(requestedUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(700);
     if (/login/i.test(page.url())) throw new Error(`${route} redirected to login; protected proof was not captured`);
     return { name, requestedUrl, response };
   }
@@ -38,7 +39,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     const control = page.getByRole('button', { name: matcher }).first();
     if (!(await control.count())) throw new Error(`No Operations scenario button matched ${matcher}`);
     await control.click();
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(300);
     if (retry) {
       const retryButton = page.getByRole('button', { name: /run deterministic retry/i }).first();
       if (!(await retryButton.count())) throw new Error('Retry button was not available for retryable Operations scenario');
@@ -58,8 +59,9 @@ fs.mkdirSync(outputDir, { recursive: true });
   await captureRoute('readiness', '/agent-readiness');
 
   fs.writeFileSync(path.join(outputDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  await browser.close();
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;
+}).finally(async () => {
+  if (browser) await browser.close();
 });
