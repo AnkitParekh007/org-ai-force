@@ -68,11 +68,11 @@ jobs:
           mkdir -p "$(dirname "$out")"
           frames=()
           for name in workspace operations-policy-denied operations-approval-rejected operations-browser-timeout operations-browser-timeout-retry readiness; do
-            if [[ -s "$captures/$name.png" ]]; then frames+=("$captures/$name.png"); fi
+            test -s "$captures/$name.png"
+            frames+=("$captures/$name.png")
           done
-          test ${#frames[@]} -ge 6
-          convert -delay 125 -loop 0 "${frames[@]}" -resize '960x960>' -layers Optimize "$out"
-          gifsicle -O3 --colors 160 "$out" -o "$out"
+          convert -delay 125 -loop 0 "${frames[@]}" -resize '960x600>' -layers Optimize "$out"
+          gifsicle -O3 --colors 128 "$out" -o "$out"
           test -s "$out"
           test "$(stat -c%s "$out")" -lt 8000000
 
