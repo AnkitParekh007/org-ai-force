@@ -1,9 +1,8 @@
 name: Capture Public Proof
 
 on:
-  pull_request_target:
-    branches: [main]
-    types: [opened, reopened, synchronize]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
 permissions:
@@ -11,13 +10,13 @@ permissions:
 
 jobs:
   capture-local-mock-proof:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.issue.pull_request && github.event.comment.body == '/generate-ops-proof') }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout same-repository PR head
+      - name: Checkout final Operations proof branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref || 'main' }}
+          ref: agent/org-final-visual-v4
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -76,8 +75,7 @@ jobs:
             docs/assets/screenshots/org-ai-force-demo.gif
           if-no-files-found: error
           retention-days: 30
-      - name: Commit validated GIF to PR branch
-        if: ${{ github.event_name == 'pull_request_target' }}
+      - name: Commit validated GIF to proof branch
         shell: bash
         run: |
           git restore src/environments/environment.ts
@@ -86,4 +84,4 @@ jobs:
           git add docs/assets/screenshots/org-ai-force-demo.gif
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Add Operations resilience public proof GIF [skip ci]'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:agent/org-final-visual-v4
