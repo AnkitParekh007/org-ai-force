@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 
 import { OpsApiService } from '../../core/services/ops-api.service';
+import { EnterpriseResilienceLabComponent } from './enterprise-resilience-lab.component';
 
 @Component({
 	selector: 'bm-ops-dashboard',
 	standalone: true,
+	imports: [EnterpriseResilienceLabComponent],
 	templateUrl: './ops-dashboard.component.html',
 	styleUrl: './ops-dashboard.component.css',
 })
