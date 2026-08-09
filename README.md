@@ -12,6 +12,12 @@ This repo is a **prototype and architecture proof project**, not a claim of prod
 - Open [Public Proof](docs/public-proof.md) for a 30-second / 3-minute / 15-minute reviewer path.
 - Inspect the Operations surface to see how the workspace behaves when RAG, tools, approvals, browser workers, providers, or readiness dependencies fail.
 
+<p align="center">
+  <img src="docs/assets/screenshots/org-ai-force-demo.gif" alt="Org AI Force Operations resilience walkthrough" width="800" />
+</p>
+
+<p align="center"><em>Deterministic mock-mode public proof: healthy workspace → tool denied by policy → approval rejected → browser-worker timeout → bounded retry → degraded readiness. No public application or production enterprise deployment is claimed.</em></p>
+
 The key enterprise rule is:
 
 > **Frontend visibility never grants execution permission. Backend policy remains authoritative.**
@@ -64,7 +70,7 @@ The protected Operations surface includes deterministic failure scenarios for:
 
 These states are intentionally explicit: no fabricated citations, no execution after policy/approval rejection, no silent conversion of dependency failure into success, and no assumption that a visible frontend capability is authorized.
 
-See [docs/public-proof.md](docs/public-proof.md) for the reviewer sequence and screenshot plan.
+See [docs/public-proof.md](docs/public-proof.md) for the reviewer sequence and evidence boundary.
 
 ## Architecture
 
@@ -166,8 +172,9 @@ Available assets:
 - `docs/assets/screenshots/pilot-hub.png`
 - `docs/assets/screenshots/readiness-report.png`
 - `docs/assets/screenshots/tool-execution-timeline.png`
+- `docs/assets/screenshots/org-ai-force-demo.gif`
 
-The short resilience/demo GIF is **planned, not currently checked in**. Track the capture work in [issue #12](https://github.com/AnkitParekh007/org-ai-force/issues/12).
+The short resilience GIF is intentionally compact for GitHub README loading and preserves the repository's prototype/mock boundary inside the animation itself.
 
 <p align="center">
   <img src="docs/assets/screenshots/workspace.png" alt="Org AI Force workspace screenshot" width="900" />
@@ -192,6 +199,7 @@ The short resilience/demo GIF is **planned, not currently checked in**. Track th
 Capture guidance:
 - [docs/screenshot-capture-guide.md](docs/screenshot-capture-guide.md)
 - [docs/public-proof.md](docs/public-proof.md)
+- [docs/public-proof-capture.md](docs/public-proof-capture.md)
 
 ## Security Model
 
