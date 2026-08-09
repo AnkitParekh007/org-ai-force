@@ -1,8 +1,20 @@
 # Org AI Force
 
-Enterprise Angular 21 agent workspace prototype with a NestJS orchestrator, admin-governed tools, RAG-ready services, MCP-style integrations, SSE streaming hooks, Playwright/browser workers, and internal pilot operations.
+Enterprise Angular 21 agent workspace prototype with a NestJS orchestrator, admin-governed tools, RAG-ready services, MCP-style integrations, SSE streaming hooks, Playwright/browser workers, internal pilot operations, and deterministic degraded-dependency scenarios.
 
-This repo is a **prototype and architecture proof project**, not a claim of production enterprise adoption. It is designed to show how an internal AI agent workspace could be structured across frontend, backend, admin governance, and pilot rollout concerns.
+This repo is a **prototype and architecture proof project**, not a claim of production enterprise adoption. It is designed to show how an internal AI agent workspace could be structured across frontend, backend, admin governance, resilience, and pilot rollout concerns.
+
+**[Public proof](docs/public-proof.md)** · **[Recruiter review](docs/recruiter-review-guide.md)** · **[System architecture](docs/system-architecture.md)** · **[Security model](docs/security-model.md)**
+
+## Review This Repo In 30 Seconds
+
+- Scan the workspace, admin, pilot, readiness, and tool-timeline screenshots below.
+- Open [Public Proof](docs/public-proof.md) for a 30-second / 3-minute / 15-minute reviewer path.
+- Inspect the Operations surface to see how the workspace behaves when RAG, tools, approvals, browser workers, providers, or readiness dependencies fail.
+
+The key enterprise rule is:
+
+> **Frontend visibility never grants execution permission. Backend policy remains authoritative.**
 
 ## What Is Implemented Vs Mock Vs Planned
 
@@ -11,6 +23,8 @@ This repo is a **prototype and architecture proof project**, not a claim of prod
 - Angular 21 workspace shell with routes for agents, admin, pilot, ops, logs, readiness, and debug tools
 - NestJS server modules for auth, agents, tools, RAG, connectors, pilot ops, observability, and browser workers
 - role and permission guards for the frontend and backend
+- deterministic resilience scenarios inside the protected Operations surface
+- PR-triggered CI for frontend tests/typecheck/build plus backend typecheck
 - Docker and Docker Compose setup for a local or pilot-style environment
 - Prisma schemas for SQLite and PostgreSQL-oriented deployment paths
 - mock-safe workspace behavior for agent sessions, artifacts, tool events, approvals, and test-worker style flows
@@ -20,6 +34,7 @@ This repo is a **prototype and architecture proof project**, not a claim of prod
 - many agent responses and runtime events in frontend demo mode
 - demo tools, demo workflows, demo approvals, and pilot feedback seed data
 - browser and Playwright worker experience when used as a safe prototype path
+- deterministic failure scenarios used to demonstrate degraded operations without external dependencies
 - some admin and pilot dashboard content when running without a fully wired backend stack
 
 ### Planned Or Still Maturing
@@ -30,6 +45,21 @@ This repo is a **prototype and architecture proof project**, not a claim of prod
 - multi-tenant controls and broader connector coverage
 - stronger production observability and automated validation coverage
 
+## Enterprise Resilience Lab
+
+The protected Operations surface includes deterministic failure scenarios for:
+
+- RAG unavailable
+- tool denied by backend policy
+- approval rejection
+- browser worker timeout
+- provider timeout
+- degraded readiness
+
+These states are intentionally explicit: no fabricated citations, no execution after policy/approval rejection, no silent conversion of dependency failure into success, and no assumption that a visible frontend capability is authorized.
+
+See [docs/public-proof.md](docs/public-proof.md) for the reviewer sequence and screenshot plan.
+
 ## Architecture
 
 ```mermaid
@@ -38,7 +68,7 @@ flowchart LR
     Frontend --> Agents["Agent workspace routes"]
     Frontend --> Admin["Admin console"]
     Frontend --> Pilot["Pilot hub"]
-    Frontend --> Ops["Ops and readiness views"]
+    Frontend --> Ops["Ops and resilience views"]
     Frontend --> Api["NestJS orchestrator API"]
 
     Api --> Auth["Auth and RBAC"]
@@ -81,6 +111,9 @@ Frontend:
 
 ```bash
 npm install
+npm test
+npm run typecheck
+npm run build
 npm start
 ```
 
@@ -89,6 +122,7 @@ Backend:
 ```bash
 cd server
 npm install
+npm run typecheck
 npm run build
 npm run start:dev
 ```
@@ -115,6 +149,7 @@ npm run start:dev
 - admin overview with visible mock tools, workflows, approvals, and platform summary
 - pilot hub with rollout guidance, feedback loops, and readiness framing
 - readiness report showing priority-agent status
+- protected Operations resilience lab showing deterministic degraded dependencies and recovery behavior
 
 ## Screenshots
 
@@ -149,12 +184,14 @@ Available assets:
 
 Capture guidance:
 - [docs/screenshot-capture-guide.md](docs/screenshot-capture-guide.md)
+- [docs/public-proof.md](docs/public-proof.md)
 
 ## Security Model
 
 - no secrets should be committed to the repo
 - admin and debug routes are permission-gated
 - tool execution and approvals are treated as governed flows
+- frontend visibility does not grant execution permission
 - mock mode exists for safe demoing when live systems are unavailable
 - Docker and environment templates are examples, not a substitute for real vaulting, HTTPS, or production secret handling
 
@@ -163,6 +200,7 @@ Start with:
 
 ## Documentation
 
+- [Public proof](docs/public-proof.md)
 - [System architecture](docs/system-architecture.md)
 - [Agent orchestration](docs/agent-orchestration.md)
 - [RAG and tool layer](docs/rag-and-tool-layer.md)
@@ -175,6 +213,7 @@ Start with:
 ## Recruiter Review
 
 For the fastest walkthrough, use:
+- [docs/public-proof.md](docs/public-proof.md)
 - [docs/recruiter-review-guide.md](docs/recruiter-review-guide.md)
 
 ## Validation Commands
@@ -182,16 +221,17 @@ For the fastest walkthrough, use:
 Frontend:
 
 ```bash
-npm run build
+npm test
 npm run typecheck
+npm run build
 ```
 
 Backend:
 
 ```bash
 cd server
-npm run build
 npm run typecheck
+npm run build
 ```
 
 Docker:
@@ -199,3 +239,9 @@ Docker:
 ```bash
 docker compose config
 ```
+
+## Ecosystem Path
+
+**Learn → Pattern → Run → Platform → Govern → Operate**
+
+[AI Tools Cheatsheets](https://github.com/AnkitParekh007/ai-tools-cheatsheets) → [Frontend AI Patterns](https://github.com/AnkitParekh007/frontend-ai-patterns) → [Angular AI Copilot Starter](https://github.com/AnkitParekh007/angular-ai-copilot-starter) → [ngx-copilot-platform](https://github.com/AnkitParekh007/ngx-copilot-platform) → [Agent Studio](https://github.com/AnkitParekh007/agent-studio) → **Org AI Force**
