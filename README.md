@@ -16,6 +16,12 @@ The key enterprise rule is:
 
 > **Frontend visibility never grants execution permission. Backend policy remains authoritative.**
 
+## Public Hosting Status
+
+There is currently **no public hosted Org AI Force application** claimed by this repository. Public proof is intentionally based on the checked-in screenshots, deterministic tests, documented local/Docker run path, and architecture/recruiter guides.
+
+A future mock-safe hosted frontend should be treated as a separate launch decision because the application includes authenticated, admin, debug, browser-worker, and backend-oriented surfaces. Until that deployment boundary is designed explicitly, the README should not imply that a public Pages demo exists.
+
 ## What Is Implemented Vs Mock Vs Planned
 
 ### Implemented
@@ -160,7 +166,8 @@ Available assets:
 - `docs/assets/screenshots/pilot-hub.png`
 - `docs/assets/screenshots/readiness-report.png`
 - `docs/assets/screenshots/tool-execution-timeline.png`
-- `docs/assets/screenshots/org-ai-force-demo.gif`
+
+The short resilience/demo GIF is **planned, not currently checked in**. Track the capture work in [issue #12](https://github.com/AnkitParekh007/org-ai-force/issues/12).
 
 <p align="center">
   <img src="docs/assets/screenshots/workspace.png" alt="Org AI Force workspace screenshot" width="900" />
