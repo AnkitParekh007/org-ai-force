@@ -1,0 +1,99 @@
+name: Capture Public Proof
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['agent/final-visual-proof']
+    paths:
+      - 'scripts/capture-public-proof.cjs'
+      - '.github/workflows/capture-public-proof.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  capture-local-mock-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Enable existing local mock-agent mode for protected proof capture
+        run: sed -i 's/enableMockAgents: false/enableMockAgents: true/' src/environments/environment.ts
+
+      - name: Start Angular workspace locally
+        shell: bash
+        run: |
+          npm start -- --host 127.0.0.1 --port 4200 > /tmp/org-ai-force-ui.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4200/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/org-ai-force-ui.log
+          exit 1
+
+      - name: Install isolated Playwright runtime
+        run: |
+          mkdir -p /tmp/public-proof-playwright
+          cd /tmp/public-proof-playwright
+          npm init -y
+          npm install --no-audit --no-fund playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Install GIF tooling
+        run: sudo apt-get update && sudo apt-get install -y imagemagick gifsicle
+
+      - name: Capture protected mock-mode Operations proof
+        env:
+          NODE_PATH: /tmp/public-proof-playwright/node_modules
+          CAPTURE_BASE_URL: http://127.0.0.1:4200/
+          CAPTURE_OUTPUT_DIR: ${{ runner.temp }}/public-proof-captures
+        run: node scripts/capture-public-proof.cjs
+
+      - name: Build optimized Operations resilience GIF
+        shell: bash
+        run: |
+          set -euo pipefail
+          captures='${{ runner.temp }}/public-proof-captures'
+          out='docs/assets/screenshots/org-ai-force-demo.gif'
+          mkdir -p "$(dirname "$out")"
+          frames=()
+          for name in workspace operations-policy-denied operations-approval-rejected operations-browser-timeout operations-browser-timeout-retry readiness; do
+            if [[ -s "$captures/$name.png" ]]; then frames+=("$captures/$name.png"); fi
+          done
+          test ${#frames[@]} -ge 6
+          convert -delay 125 -loop 0 "${frames[@]}" -resize '960x960>' -layers Optimize "$out"
+          gifsicle -O3 --colors 160 "$out" -o "$out"
+          test -s "$out"
+          test "$(stat -c%s "$out")" -lt 8000000
+
+      - name: Upload public proof captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: org-ai-force-public-proof
+          path: |
+            ${{ runner.temp }}/public-proof-captures
+            docs/assets/screenshots/org-ai-force-demo.gif
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit generated final asset to generation branch
+        if: ${{ github.event_name == 'push' && github.ref_name == 'agent/final-visual-proof' }}
+        shell: bash
+        run: |
+          git restore src/environments/environment.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/assets/screenshots/org-ai-force-demo.gif
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add Operations resilience public proof GIF [skip ci]'
+          git push origin HEAD:${GITHUB_REF_NAME}
