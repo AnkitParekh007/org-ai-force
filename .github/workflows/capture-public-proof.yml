@@ -17,16 +17,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: agent/org-final-visual-v4
+
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - name: Install application dependencies
+        id: install
+        continue-on-error: true
         run: npm ci
+
       - name: Enable existing local mock-agent mode for protected proof capture
+        id: mock
+        continue-on-error: true
         run: sed -i 's/enableMockAgents: false/enableMockAgents: true/' src/environments/environment.ts
+
       - name: Start Angular workspace locally
+        id: start
+        continue-on-error: true
         shell: bash
         run: |
           npm start -- --host 127.0.0.1 --port 4200 > /tmp/org-ai-force-ui.log 2>&1 &
@@ -36,22 +46,34 @@ jobs:
           done
           cat /tmp/org-ai-force-ui.log
           exit 1
+
       - name: Install isolated Playwright runtime
+        id: playwright
+        continue-on-error: true
         run: |
           mkdir -p /tmp/public-proof-playwright
           cd /tmp/public-proof-playwright
           npm init -y
           npm install --no-audit --no-fund playwright@1.54.2
           npx playwright install --with-deps chromium
+
       - name: Install GIF tooling
+        id: giftools
+        continue-on-error: true
         run: sudo apt-get update && sudo apt-get install -y imagemagick gifsicle
+
       - name: Capture protected mock-mode Operations proof
+        id: capture
+        continue-on-error: true
         env:
           NODE_PATH: /tmp/public-proof-playwright/node_modules
           CAPTURE_BASE_URL: http://127.0.0.1:4200/
           CAPTURE_OUTPUT_DIR: ${{ runner.temp }}/public-proof-captures
         run: node scripts/capture-public-proof.cjs
+
       - name: Build optimized Operations resilience GIF
+        id: generate
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -66,7 +88,9 @@ jobs:
           gifsicle -O3 --colors 128 "$out" -o "$out"
           test -s "$out"
           test "$(stat -c%s "$out")" -lt 8000000
+
       - name: Upload public proof captures
+        if: ${{ steps.generate.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: org-ai-force-public-proof
@@ -75,13 +99,40 @@ jobs:
             docs/assets/screenshots/org-ai-force-demo.gif
           if-no-files-found: error
           retention-days: 30
-      - name: Commit validated GIF to proof branch
+
+      - name: Report result and commit validated asset
+        if: always()
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          MOCK_OUTCOME: ${{ steps.mock.outcome }}
+          START_OUTCOME: ${{ steps.start.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+          GIFTOOLS_OUTCOME: ${{ steps.giftools.outcome }}
+          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          GENERATE_OUTCOME: ${{ steps.generate.outcome }}
         shell: bash
         run: |
-          git restore src/environments/environment.ts
+          git restore src/environments/environment.ts || true
+          status='docs/assets/screenshots/ops-proof-generation-status.md'
+          cat > "$status" <<EOF
+          # Operations proof generation status
+
+          - install: $INSTALL_OUTCOME
+          - mock boundary: $MOCK_OUTCOME
+          - local app start: $START_OUTCOME
+          - Playwright install: $PLAYWRIGHT_OUTCOME
+          - GIF tooling: $GIFTOOLS_OUTCOME
+          - protected capture: $CAPTURE_OUTCOME
+          - GIF generation: $GENERATE_OUTCOME
+          EOF
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/assets/screenshots/org-ai-force-demo.gif
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Add Operations resilience public proof GIF [skip ci]'
-          git push origin HEAD:agent/org-final-visual-v4
+          git add "$status"
+          if [[ "$GENERATE_OUTCOME" == 'success' ]]; then
+            git add docs/assets/screenshots/org-ai-force-demo.gif
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record Operations visual proof generation [skip ci]'
+            git push origin HEAD:agent/org-final-visual-v4
+          fi
+          [[ "$GENERATE_OUTCOME" == 'success' ]]
