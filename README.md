@@ -6,6 +6,16 @@ This repo is a **prototype and architecture proof project**, not a claim of prod
 
 **[Public proof](docs/public-proof.md)** · **[Recruiter review](docs/recruiter-review-guide.md)** · **[System architecture](docs/system-architecture.md)** · **[Security model](docs/security-model.md)**
 
+## Architecture decision brief for hiring managers
+
+**Problem:** Internal enterprise agents require consistent authorization, traceable tool use and safe degraded behavior across frontend, API, worker and operator surfaces.
+
+**Decisions and tradeoffs:** Angular 21 provides a typed enterprise workspace; NestJS owns policy and orchestration boundaries; role guards and explicit approval states prevent UI visibility from implying execution rights. Deterministic failure scenarios help demonstrate resilience UX but do not validate live provider or connector behavior.
+
+**Review evidence:** [Public proof](docs/public-proof.md) · [Architecture](docs/system-architecture.md) · [Security model](docs/security-model.md) · [Recruiter guide](docs/recruiter-review-guide.md).
+
+**Validation boundary:** This is a prototype and architecture proof, not a production enterprise deployment. Mock agent responses, approvals and browser-worker scenarios must not be represented as live integrations. Current CI/test status requires checking the relevant GitHub Actions run.
+
 ## Review This Repo In 30 Seconds
 
 - Scan the workspace, admin, pilot, readiness, and tool-timeline screenshots below.
